@@ -6,4 +6,4 @@ chromadb
 langchain-community
 langchain-cohere
 cohere
-PyPDF2
+pypdf
