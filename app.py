@@ -11,7 +11,7 @@ from langchain.chains import RetrievalQA
 os.environ["COHERE_API_KEY"] = 'Ox97SolGnL68xrDjbNAMiVaWCqZ5Fny3d7hYAub6'
 
 # Specify the path to your PDF file
-PDF_FILE_PATH = 'path/to/your/document.pdf'  # Update this path to your PDF file
+PDF_FILE_PATH = 'iesc111.pdf'  # Update this path to your PDF file
 
 # Load the PDF using PyPDFLoader
 loader = PyPDFLoader(PDF_FILE_PATH)
@@ -32,7 +32,7 @@ vectordb = Chroma.from_documents(documents=docs_split, embedding=embeddings)
 retriever = vectordb.as_retriever()
 
 # Initialize the LLM (Cohere-based) and RetrievalQA chain
-llm = Cohere(model="command-xlarge-2023")  # Cohere LLM for Q&A
+llm = ChatCohere()  # Cohere LLM for Q&A
 rag_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",  # Using simple "stuff" strategy for retrieved docs
