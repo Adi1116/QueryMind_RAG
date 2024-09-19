@@ -1,14 +1,12 @@
-import streamlit as st
-from langchain.vectorstores import Chroma
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain_cohere import CohereEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.agents import initialize_agent, Tool
-from langchain.agents import AgentType
-from langchain_core.documents import Document
-from io import StringIO
 import os
+import streamlit as st
+from io import BytesIO
+from langchain_community.vectorstores import Chroma  # Updated import
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.embeddings.cohere import CohereEmbeddings
+from langchain.llms import Cohere
+from langchain.chains import RetrievalQA
 
 # Set the environment variable for Cohere API Key
 os.environ["COHERE_API_KEY"] = 'Ox97SolGnL68xrDjbNAMiVaWCqZ5Fny3d7hYAub6'
@@ -21,8 +19,11 @@ uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
 # If PDF is uploaded
 if uploaded_file is not None:
+    # Convert the uploaded file to a BytesIO object (works as a file-like object)
+    pdf_file = BytesIO(uploaded_file.read())
+
     # Load the PDF using PyPDFLoader
-    loader = PyPDFLoader(uploaded_file)
+    loader = PyPDFLoader(pdf_file)
     docs = loader.load()
 
     # Split the document into chunks
@@ -33,14 +34,14 @@ if uploaded_file is not None:
     docs_split = text_splitter.split_documents(docs)
     
     # Initialize Cohere embeddings and Chroma VectorStore
-    embeddings = CohereEmbeddings(model="embed-english-v3.0")
+    embeddings = CohereEmbeddings(model="embed-english-v2.0")  # Use correct model version
     vectordb = Chroma.from_documents(documents=docs_split, embedding=embeddings)
 
     # Create a retriever from the VectorStore
     retriever = vectordb.as_retriever()
 
     # Initialize the LLM (Cohere-based) and RetrievalQA chain
-    llm = ChatCohere()
+    llm = Cohere(model="command-xlarge-2023")  # Cohere LLM for Q&A
     rag_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",  # Using simple "stuff" strategy for retrieved docs
@@ -68,4 +69,3 @@ if uploaded_file is not None:
         for idx, (question, answer) in enumerate(st.session_state.chat_history):
             st.write(f"**Q{idx+1}:** {question}")
             st.write(f"**A{idx+1}:** {answer}")
-
