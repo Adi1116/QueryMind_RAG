@@ -4,5 +4,6 @@ openai
 tiktoken
 chromadb
 langchain-community
+langchain-cohere
 cohere
 PyPDF2
