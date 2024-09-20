@@ -1,4 +1,7 @@
 streamlit
+streamlit-chat
+requests
+dotenv
 langchain
 openai
 tiktoken
@@ -8,4 +11,4 @@ langchain-cohere
 cohere
 pypdf
 audio-recorder-streamlit
-
+PyPDF2
