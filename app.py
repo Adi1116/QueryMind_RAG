@@ -6,7 +6,7 @@ from langchain.chains import ConversationalRetrievalChain
 import requests
 from audio_recorder_streamlit import audio_recorder
 import json
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
@@ -16,7 +16,7 @@ from langchain.chains import RetrievalQA
 from langchain.agents import initialize_agent, Tool, AgentType
 
 # Load environment variables and set the API key
-load_dotenv()
+# load_dotenv()
 os.environ["COHERE_API_KEY"] = 'Ox97SolGnL68xrDjbNAMiVaWCqZ5Fny3d7hYAub6'
 os.environ['API_KEY'] = "b1afee3b-c36c-4abf-8c35-5aeec8cba897"
 
