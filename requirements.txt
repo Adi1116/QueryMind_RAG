@@ -7,3 +7,5 @@ langchain-community
 langchain-cohere
 cohere
 pypdf
+audio-recorder-streamlit
+
