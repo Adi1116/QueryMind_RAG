@@ -6,22 +6,19 @@ from langchain.chains import ConversationalRetrievalChain
 import requests
 from audio_recorder_streamlit import audio_recorder
 import json
-# from dotenv import load_dotenv
-
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_cohere import CohereEmbeddings, ChatCohere
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS  # Changed to FAISS
 from langchain.chains import RetrievalQA
 from langchain.agents import initialize_agent, Tool, AgentType
-
-# Load environment variables and set the API key
-# load_dotenv()
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 os.environ["COHERE_API_KEY"] = 'Ox97SolGnL68xrDjbNAMiVaWCqZ5Fny3d7hYAub6'
 os.environ['API_KEY'] = "b1afee3b-c36c-4abf-8c35-5aeec8cba897"
 
 # Document Preprocessing
-
 @st.cache_data
 def doc_preprocessing():
     loader = PyPDFLoader("iesc111.pdf")
@@ -38,10 +35,7 @@ def doc_preprocessing():
 def embeddings_store():
     embedding = CohereEmbeddings(model="embed-english-v3.0")
     texts = doc_preprocessing()
-    persist_directory = 'db'
-    vectordb = Chroma.from_documents(documents=texts,
-                                     embedding=embedding,
-                                     persist_directory=persist_directory)
+    vectordb = FAISS.from_documents(documents=texts, embedding=embedding)  # Changed to FAISS
     retriever = vectordb.as_retriever()
     return retriever
 
@@ -67,7 +61,7 @@ def rag_agent():
     # Create a RAG chain
     rag_chain = RetrievalQA.from_chain_type(
         llm=ChatCohere(),
-        chain_type="stuff",  # Use the "stuff" method for chaining
+        chain_type="stuff",
         retriever=retriever
     )
 
@@ -87,7 +81,7 @@ def rag_agent():
     )
 
     return agent
-os.environ['API_KEY'] = "b1afee3b-c36c-4abf-8c35-5aeec8cba897"
+
 # Audio transcription using Sarvam API
 def transcribe_audio(audio_file_path):
     with open(audio_file_path, 'rb') as audio_file:
@@ -104,20 +98,19 @@ def transcribe_audio(audio_file_path):
         }
 
         response = requests.post(url, files=files, data=data, headers=headers)
-      
-
-# Assuming response.text contains the JSON string
         data = json.loads(response.text)
-
-# Now you can extract the transcript
         transcript = data["transcript"]
         return transcript
 
 # Display conversation history using Streamlit messages
 def display_conversation(history):
     for i in range(len(history["generated"])):
-        message(history["past"][i], is_user=True, key=str(i) + "_user")
-        message(history["generated"][i], key=str(i))
+        user_message = history["past"][i] if isinstance(history["past"][i], str) else "Invalid user message"
+        bot_message = history["generated"][i] if isinstance(history["generated"][i], str) else "Invalid bot response"
+        
+        # Render messages using streamlit_chat's message function
+        message(user_message, is_user=True, key=str(i) + "_user")
+        message(bot_message, key=str(i))
 
 # Main Streamlit function
 def main_f():
