@@ -168,4 +168,4 @@ def main_f():
         display_conversation(st.session_state)
 
 if __name__ == "__main__":
-    main_f()
+    main()
