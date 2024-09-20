@@ -1,7 +1,6 @@
 streamlit
 streamlit-chat
 requests
-dotenv
 langchain
 openai
 tiktoken
