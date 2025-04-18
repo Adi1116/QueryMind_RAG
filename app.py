@@ -6,12 +6,14 @@ from langchain.chains import ConversationalRetrievalChain
 import requests
 from audio_recorder_streamlit import audio_recorder
 import json
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_cohere import CohereEmbeddings, ChatCohere
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain.agents import initialize_agent, Tool, AgentType
+from langchain.agents import Tool, AgentExecutor
+from langchain.agents.agent import create_zero_shot_agent
+from langchain.prompts import ChatPromptTemplate
 
 __import__('pysqlite3')
 import sys
@@ -43,7 +45,6 @@ def embeddings_store():
 def search_db():
     retriever = embeddings_store()
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key="answer")
-    
     qa = ConversationalRetrievalChain.from_llm(
         llm=ChatCohere(),
         memory=memory,
@@ -51,13 +52,14 @@ def search_db():
     )
     return qa
 
-# RAG Agent integration
+# RAG Agent integration with proper parsing error handling
 @st.cache_resource
 def rag_agent():
     retriever = embeddings_store()
 
+    llm = ChatCohere()
     rag_chain = RetrievalQA.from_chain_type(
-        llm=ChatCohere(),
+        llm=llm,
         chain_type="stuff",
         retriever=retriever
     )
@@ -65,18 +67,24 @@ def rag_agent():
     rag_tool = Tool(
         name="DocumentQA",
         func=rag_chain.run,
-        description="Use this tool to answer questions by retrieving and using context from documents."
+        description="Use this tool to answer questions using document context."
     )
 
-    agent = initialize_agent(
+    # Custom prompt and agent setup
+    prompt = ChatPromptTemplate.from_template(
+        "Answer the following question using the available tools:\n\n{input}"
+    )
+
+    agent = create_zero_shot_agent(llm=llm, tools=[rag_tool], prompt=prompt)
+
+    agent_executor = AgentExecutor.from_agent_and_tools(
+        agent=agent,
         tools=[rag_tool],
-        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        llm=ChatCohere(),
         verbose=True,
-        handle_parsing_errors=True  # ✅ Important Fix
+        handle_parsing_errors=True  # ✅ Key Fix
     )
 
-    return agent
+    return agent_executor
 
 # Audio transcription using Sarvam API
 def transcribe_audio(audio_file_path):
@@ -103,7 +111,6 @@ def display_conversation(history):
     for i in range(len(history["generated"])):
         user_message = history["past"][i] if isinstance(history["past"][i], str) else "Invalid user message"
         bot_message = history["generated"][i] if isinstance(history["generated"][i], str) else "Invalid bot response"
-        
         message(user_message, is_user=True, key=str(i) + "_user")
         message(bot_message, key=str(i))
 
@@ -112,7 +119,7 @@ def main_f():
     st.title("LLM Powered Chatbot with Audio Input")
 
     rag_agent_instance = rag_agent()
-    
+
     if "generated" not in st.session_state:
         st.session_state["generated"] = ["I am ready to help you"]
     if "past" not in st.session_state:
@@ -134,7 +141,7 @@ def main_f():
             st.write(f"Transcribed Text: {transcribed_text}")
 
             if st.checkbox("Use Document-based QA", key="rag_toggle"):
-                output = rag_agent_instance.invoke({"input": transcribed_text})  # ✅ Use invoke instead of run
+                output = rag_agent_instance.invoke({"input": transcribed_text})  # ✅ Use invoke
             else:
                 input_dict = {"question": transcribed_text}
                 qa = search_db()
