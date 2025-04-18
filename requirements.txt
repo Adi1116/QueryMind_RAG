@@ -5,7 +5,7 @@ langchain-community
 langchain-cohere
 cohere
 pypdf
-protobuf3.20.0
+protobuf==3.20.0
 pysqlite3-binary
 faiss-cpu
 googletrans==4.0.0-rc1
