@@ -6,15 +6,18 @@ from langchain.chains import ConversationalRetrievalChain
 import requests
 from audio_recorder_streamlit import audio_recorder
 import json
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_cohere import CohereEmbeddings, ChatCohere
-from langchain_community.vectorstores import FAISS  # Changed to FAISS
+from langchain_community.vectorstores import FAISS  
 from langchain.chains import RetrievalQA
-from langchain.agents import initialize_agent, Tool, AgentType
+# from langchain.agents import initialize_agent, Tool, AgentType
+
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+# Environment variables
 os.environ["COHERE_API_KEY"] = 'Ox97SolGnL68xrDjbNAMiVaWCqZ5Fny3d7hYAub6'
 os.environ['API_KEY'] = "b1afee3b-c36c-4abf-8c35-5aeec8cba897"
 
@@ -35,13 +38,13 @@ def doc_preprocessing():
 def embeddings_store():
     embedding = CohereEmbeddings(model="embed-english-v3.0")
     texts = doc_preprocessing()
-    vectordb = FAISS.from_documents(documents=texts, embedding=embedding)  # Changed to FAISS
+    vectordb = FAISS.from_documents(documents=texts, embedding=embedding)  
     retriever = vectordb.as_retriever()
     return retriever
 
 # Conversational Retrieval Chain
 @st.cache_resource
-def search_db():
+def conversational_qa():
     retriever = embeddings_store()
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True, output_key="answer")
     
@@ -52,38 +55,51 @@ def search_db():
         retriever=retriever
     )
     return qa
-
-# RAG Agent integration
-@st.cache_resource
-def rag_agent():
-    retriever = embeddings_store()
     
-    # Create a RAG chain
-    rag_chain = RetrievalQA.from_chain_type(
+# Simple RetrievalQA (RAG Chain)
+@st.cache_resource
+def rag_qa_chain():
+    retriever = embeddings_store()
+    return RetrievalQA.from_chain_type(
         llm=ChatCohere(),
         chain_type="stuff",
         retriever=retriever
     )
 
-    # Define a tool for querying the RAG chain
-    rag_tool = Tool(
-        name="DocumentQA",
-        func=rag_chain.run,
-        description="Use this tool to answer questions by retrieving and using context from documents."
-    )
+# # RAG Agent integration
+# @st.cache_resource
+# def rag_agent():
+#     retriever = embeddings_store()
+    
+#     # Create a RAG chain
+#     rag_chain = RetrievalQA.from_chain_type(
+#         llm=ChatCohere(),
+#         chain_type="stuff",
+#         retriever=retriever
+#     )
 
-    # Initialize an agent with the RAG tool
-    agent = initialize_agent(
-        tools=[rag_tool],
-        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-        llm=ChatCohere(),
-        verbose=True,
-        handle_parsing_errors=True
-    )
+#     # Define a tool for querying the RAG chain
+#     rag_tool = Tool(
+#         name="DocumentQA",
+#         func=rag_chain.run,
+#         description="Use this tool to answer questions by retrieving and using context from documents."
+#     )
 
-    return agent
+#     # Initialize an agent with the RAG tool
+#     agent = initialize_agent(
+#         tools=[rag_tool],
+#         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+#         llm=ChatCohere(),
+#         verbose=True,
+#         handle_parsing_errors=True
+#     )
+
+#     return agent
+
 
 # Audio transcription using Sarvam API
+from googletrans import Translator
+
 def transcribe_audio(audio_file_path):
     with open(audio_file_path, 'rb') as audio_file:
         files = {
@@ -91,7 +107,7 @@ def transcribe_audio(audio_file_path):
         }
         data = {
             'prompt': '<string>',
-            'model': 'saaras:v1'
+            'model': 'saaras:v1',
         }
         url = "https://api.sarvam.ai/speech-to-text-translate"
         headers = {
@@ -99,28 +115,38 @@ def transcribe_audio(audio_file_path):
         }
 
         response = requests.post(url, files=files, data=data, headers=headers)
-        data = json.loads(response.text)
-        transcript = data["transcript"]
-        return transcript
 
-# Display conversation history using Streamlit messages
+        try:
+            data = response.json()
+            transcript = data.get("transcript", "")
+
+            # Translate to English if not already in English
+            translator = Translator()
+            translation = translator.translate(transcript, dest='en')
+
+            return translation.text
+
+        except Exception as e:
+            raise RuntimeError(f"Error during transcription or translation: {e}\nRaw response: {response.text}")
+
+
+
+
+# Display conversation history
 def display_conversation(history):
     for i in range(len(history["generated"])):
-        user_message = history["past"][i] if isinstance(history["past"][i], str) else "Invalid user message"
-        bot_message = history["generated"][i] if isinstance(history["generated"][i], str) else "Invalid bot response"
-        
-        # Render messages using streamlit_chat's message function
-        message(user_message, is_user=True, key=str(i) + "_user")
-        message(bot_message, key=str(i))
+        message(history["past"][i], is_user=True, key=f"{i}_user")
+        message(history["generated"][i], key=str(i))
 
-# Main Streamlit function
+# Main function
 def main_f():
-    st.title("LLM Powered Chatbot with Audio Input")
+    st.title("LLM Powered Chatbot with Audio Input (Tool-Free)")
 
-    # Initialize RAG agent
-    rag_agent_instance = rag_agent()
-    
-    # Initialize session state for generated responses and past messages
+    # Initialize chains
+    rag_chain = rag_qa_chain()
+    convo_chain = conversational_qa()
+
+    # Initialize session
     if "generated" not in st.session_state:
         st.session_state["generated"] = ["I am ready to help you"]
     if "past" not in st.session_state:
@@ -129,37 +155,31 @@ def main_f():
     # Record audio
     audio_bytes = audio_recorder()
 
-    # If audio is recorded, save and transcribe it
     if audio_bytes:
         st.audio(audio_bytes, format="audio/wav")
-
-        # Save the audio to a .wav file
         audio_file_path = "recorded_audio.wav"
         with open(audio_file_path, "wb") as f:
             f.write(audio_bytes)
+        st.success("Audio recorded and saved.")
 
-        st.success("Audio recorded and saved as 'recorded_audio.wav'.")
-
-        # Transcribe the audio
-        with st.spinner("Transcribing audio..."):
+        # Transcribe
+        with st.spinner("Transcribing..."):
             transcribed_text = transcribe_audio(audio_file_path)
             st.write(f"Transcribed Text: {transcribed_text}")
 
-            # Use RAG agent or conversational retrieval based on checkbox
-            if st.checkbox("Use Document-based QA", key="rag_toggle"):
-                output = rag_agent_instance.invoke({"input": transcribed_text})
+            # Run the selected chain
+            if st.checkbox("Use Document-based QA (Simple RAG)", key="rag_toggle"):
+                output = rag_chain.run(transcribed_text)
             else:
-                input_dict = {"question": transcribed_text}
-                qa = search_db()
-                output = qa(input_dict)
+                output = convo_chain({"question": transcribed_text})["answer"]
 
             # Store conversation
             st.session_state.past.append(transcribed_text)
             st.session_state.generated.append(output)
 
-    # Display conversation history
+    # Display chat
     if st.session_state["generated"]:
         display_conversation(st.session_state)
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main_f()
