@@ -66,36 +66,6 @@ def rag_qa_chain():
         retriever=retriever
     )
 
-# # RAG Agent integration
-# @st.cache_resource
-# def rag_agent():
-#     retriever = embeddings_store()
-    
-#     # Create a RAG chain
-#     rag_chain = RetrievalQA.from_chain_type(
-#         llm=ChatCohere(),
-#         chain_type="stuff",
-#         retriever=retriever
-#     )
-
-#     # Define a tool for querying the RAG chain
-#     rag_tool = Tool(
-#         name="DocumentQA",
-#         func=rag_chain.run,
-#         description="Use this tool to answer questions by retrieving and using context from documents."
-#     )
-
-#     # Initialize an agent with the RAG tool
-#     agent = initialize_agent(
-#         tools=[rag_tool],
-#         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-#         llm=ChatCohere(),
-#         verbose=True,
-#         handle_parsing_errors=True
-#     )
-
-#     return agent
-
 
 # Audio transcription using Sarvam API
 from googletrans import Translator
