@@ -77,7 +77,8 @@ def rag_agent():
         tools=[rag_tool],
         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         llm=ChatCohere(),
-        verbose=True
+        verbose=True,
+        handle_parsing_errors=True
     )
 
     return agent
@@ -146,7 +147,7 @@ def main_f():
 
             # Use RAG agent or conversational retrieval based on checkbox
             if st.checkbox("Use Document-based QA", key="rag_toggle"):
-                output = rag_agent_instance.run(input=transcribed_text)
+                output = rag_agent_instance.invoke({"input": transcribed_text})
             else:
                 input_dict = {"question": transcribed_text}
                 qa = search_db()
