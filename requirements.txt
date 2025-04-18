@@ -5,9 +5,10 @@ langchain-cohere
 langchain-community
 audio-recorder-streamlit
 requests
-cohere
+Cohere
 pypdf
 protobuf==3.20.0
 pysqlite3-binary
+chroma-hnswlib
 faiss-cpu
 googletrans==4.0.0-rc1
