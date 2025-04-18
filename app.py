@@ -12,7 +12,7 @@ from langchain_cohere import CohereEmbeddings, ChatCohere
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.agents import Tool, AgentExecutor
-from langchain.agents.agent import create_zero_shot_agent
+#from langchain.agents.agent import create_zero_shot_agent
 from langchain.prompts import ChatPromptTemplate
 
 __import__('pysqlite3')
@@ -69,19 +69,25 @@ def rag_agent():
         func=rag_chain.run,
         description="Use this tool to answer questions using document context."
     )
+    
+    # Step 1: Create base agent using initialize_agent (but do not return it)
+    base_agent = initialize_agent(
+        tools=[rag_tool],
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        llm=llm,
+        verbose=True
+    )
 
+    # Step 2: Wrap with AgentExecutor to add parsing error handling
+    agent_executor = AgentExecutor.from_agent_and_tools(
+        agent=base_agent.agent,
+        tools=[rag_tool],
+        verbose=True,
+        handle_parsing_errors=True
+    )
     # Custom prompt and agent setup
     prompt = ChatPromptTemplate.from_template(
         "Answer the following question using the available tools:\n\n{input}"
-    )
-
-    agent = create_zero_shot_agent(llm=llm, tools=[rag_tool], prompt=prompt)
-
-    agent_executor = AgentExecutor.from_agent_and_tools(
-        agent=agent,
-        tools=[rag_tool],
-        verbose=True,
-        handle_parsing_errors=True  # ✅ Key Fix
     )
 
     return agent_executor
