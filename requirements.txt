@@ -1,13 +1,13 @@
 streamlit
 streamlit-chat
-langchain
+langchain>=0.1.0
 langchain-cohere
 langchain-community
 audio-recorder-streamlit
 requests
-Cohere
+cohere
 pypdf
 protobuf==3.20.0
 pysqlite3-binary
-chroma-hnswlib
+chromadb
 faiss-cpu
