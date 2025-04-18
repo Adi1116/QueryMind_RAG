@@ -1,6 +1,6 @@
 streamlit
 streamlit-chat
-langchain>=0.1.0
+langchain
 langchain-cohere
 langchain-community
 audio-recorder-streamlit
