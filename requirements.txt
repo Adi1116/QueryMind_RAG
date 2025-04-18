@@ -1,9 +1,9 @@
-streamlit==1.24.0
+streamlit
 streamlit-chat==0.1.1
-langchain==0.1.13
+langchain
 langchain-community==0.0.21
 langchain-cohere
-cohere==5.15.0
+cohere
 pypdf==3.17.4
 protobuf==3.20.0
 pysqlite3-binary==0.5.4
